@@ -5,8 +5,11 @@ const app = express();
 const bodyParser = require("body-parser");
 const mysql = require('mysql2');
 const crypto=require('crypto');
-var session = require('express-session');
-var MySQLStore = require('express-mysql-session')(session);
+const session = require('express-session');
+const MySQLStore = require('express-mysql-session')(session);
+
+
+const pool = require('./db/pool');
 
 /*Mysql Express Session*/
 app.use(session({
@@ -220,4 +223,33 @@ app.get('/notAuthorizedAdmin', (req, res, next) => {
 
 app.listen(3000, function() {
     console.log('App listening on port 3000!')
+});
+
+// --- Tanosveny adatbázis menü ---
+// Adatbázis kapcsolat a tanosveny adatbázishoz
+app.get("/adatbazis", isAuth, (req, res) => {
+    const np_id = req.query.np_id; // GET paraméter a szűréshez
+    let npQuery = "SELECT * FROM np;";
+    let telepulesQuery = "SELECT * FROM telepules";
+    let utQuery = "SELECT * FROM ut";
+
+    if (np_id) {
+        telepulesQuery += " WHERE np_id = " + mysql.escape(np_id);
+        utQuery += " WHERE telepules_id IN (SELECT id FROM telepules WHERE np_id = " + mysql.escape(np_id) + ")";
+    }
+
+    const sql = npQuery + " " + telepulesQuery + "; " + utQuery + ";";
+
+    tanosPool.query(sql, (err, results) => {
+        if (err) {
+            console.log(err);
+            return res.status(500).send("Adatbázis hiba történt.");
+        }
+
+        const np = results[0];
+        const telepules = results[1];
+        const ut = results[2];
+
+        res.render("adatbazis", { np, telepules, ut, username: req.user.username, np_id });
+    });
 });
