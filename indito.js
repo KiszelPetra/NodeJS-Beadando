@@ -255,3 +255,40 @@ app.get('/adatbazis', (req, res) => {
     });
 });
 
+
+// Kapcsolódás a kapcsolat üzenetek 
+
+const kapcsolatDb = mysql.createConnection({
+    host: "localhost",
+    user: "root",
+    password: "",
+    database: "kapcsolat"
+});
+
+kapcsolatDb.connect((err) => {
+    if(!err) console.log("Kapcsolat adatbázishoz csatlakozva!");
+    else console.log("Hiba a kapcsolat adatbázishoz való csatlakozáskor:", err);
+});
+// Főoldal (példa, mainpage.ejs)
+app.get('/', (req, res) => {
+    res.render('mainpage');
+});
+// Üzenet mentése a kapcsolat adatbázisba
+app.post('/kapcsolat', (req, res) => {
+    const { nev, email, uzenet } = req.body;
+
+    if (!nev || !email || !uzenet) {
+        return res.send('Kérlek töltsd ki az összes mezőt!');
+    }
+
+    const sql = 'INSERT INTO messages (nev, email, uzenet) VALUES (?, ?, ?)';
+    kapcsolatDb.query(sql, [nev, email, uzenet], (err, results) => {
+        if (err) {
+            console.log(err);
+            return res.status(500).send('Hiba az üzenet mentése közben');
+        } else {
+            res.send('<h2>Köszönjük az üzeneted!</h2><p><a href="/">Vissza a főoldalra</a></p>');
+        }
+    });
+});
+
